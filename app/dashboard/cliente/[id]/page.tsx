@@ -40,7 +40,11 @@ export default async function ClienteDetallePage({ params }: PageProps) {
 
   if (!cliente) notFound()
 
-  const expedientes = (cliente.expediente as any[]) ?? []
+  type Requerimiento = { id: string; tipo_documento: string; obligatorio: boolean; estado: string }
+  type Documento     = { id: string; nombre_archivo: string; tipo: string; subido_at: string }
+  type Expediente    = { id: string; nombre: string; periodo: string; estado: string; ultimo_recordatorio: string | null; documento: Documento[]; requerimiento: Requerimiento[] }
+
+  const expedientes = (cliente.expediente as Expediente[]) ?? []
   const portalUrl = `/portal/${cliente.token_acceso}`
 
   return (
@@ -88,11 +92,11 @@ export default async function ClienteDetallePage({ params }: PageProps) {
         <p className="text-gray-400 text-sm py-8 text-center">No hay expedientes aún.</p>
       ) : (
         <div className="space-y-4">
-          {expedientes.map((exp: any) => {
-            const docs = (exp.documento ?? []) as any[]
-            const reqs = (exp.requerimiento ?? []) as any[]
-            const reqsPendientes = reqs.filter((r: any) => r.estado === 'pendiente')
-            const reqsRecibidos = reqs.filter((r: any) => r.estado === 'recibido')
+          {expedientes.map((exp: Expediente) => {
+            const docs = exp.documento ?? []
+            const reqs = exp.requerimiento ?? []
+            const reqsPendientes = reqs.filter(r => r.estado === 'pendiente')
+            const reqsRecibidos = reqs.filter(r => r.estado === 'recibido')
 
             return (
               <div key={exp.id} className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
@@ -125,7 +129,7 @@ export default async function ClienteDetallePage({ params }: PageProps) {
                       <p className="text-sm text-gray-400">Ninguno todavía</p>
                     ) : (
                       <ul className="space-y-1.5">
-                        {docs.map((doc: any) => (
+                        {docs.map((doc: Documento) => (
                           <li key={doc.id} className="flex items-center gap-2 text-sm text-gray-700">
                             <span className="text-gray-400">📄</span>
                             <span className="truncate">{doc.nombre_archivo}</span>
@@ -147,13 +151,13 @@ export default async function ClienteDetallePage({ params }: PageProps) {
                       <p className="text-sm text-gray-400">Sin requerimientos definidos</p>
                     ) : (
                       <ul className="space-y-1.5">
-                        {reqsRecibidos.map((r: any) => (
+                        {reqsRecibidos.map((r: Requerimiento) => (
                           <li key={r.id} className="flex items-center gap-2 text-sm text-gray-400">
                             <span className="text-green-500">✓</span>
                             <span className="line-through">{TIPO_LABELS[r.tipo_documento] ?? r.tipo_documento}</span>
                           </li>
                         ))}
-                        {reqsPendientes.map((r: any) => (
+                        {reqsPendientes.map((r: Requerimiento) => (
                           <li key={r.id} className="flex items-center gap-2 text-sm text-gray-700">
                             <span className={`w-2 h-2 rounded-full flex-shrink-0 ${r.obligatorio ? 'bg-red-400' : 'bg-yellow-400'}`} />
                             <span>{TIPO_LABELS[r.tipo_documento] ?? r.tipo_documento}</span>

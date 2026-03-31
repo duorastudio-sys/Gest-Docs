@@ -37,15 +37,18 @@ export async function POST(req: NextRequest, { params }: RouteParams) {
     return NextResponse.json({ error: 'Expediente no encontrado' }, { status: 404 })
   }
 
-  const cliente = expediente.cliente as any
-  const gestoria = cliente.gestoria as any
+  const cliente = expediente.cliente as unknown as {
+    id: string; nombre: string; email: string; token_acceso: string; gestoria_id: string
+    gestoria: { nombre: string } | null
+  }
+  const gestoria = cliente.gestoria
 
   // Verify ownership
   if (cliente.gestoria_id !== user.id) {
     return NextResponse.json({ error: 'No autorizado' }, { status: 403 })
   }
 
-  const pendientes = (expediente.requerimiento as any[]).filter(
+  const pendientes = (expediente.requerimiento as unknown as { tipo_documento: string; obligatorio: boolean; estado: string }[]).filter(
     r => r.estado === 'pendiente',
   )
 

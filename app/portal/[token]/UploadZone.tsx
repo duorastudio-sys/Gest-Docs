@@ -53,6 +53,7 @@ export default function UploadZone({ clienteId, expedienteId, token }: Props) {
 
   const onDrop = useCallback(
     (accepted: File[]) => accepted.forEach(uploadFile),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     [clienteId, expedienteId, token]
   )
 
