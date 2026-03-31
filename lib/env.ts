@@ -1,10 +1,12 @@
 /**
- * Centralised env validation.
- * NEXT_PUBLIC_ vars must be accessed with literal dot notation so
- * Next.js/webpack can inline them at build time.
+ * Centralised env access.
+ * Values are read lazily so module initialisation during Next.js "Collecting
+ * page data" does NOT throw — the error surfaces on the first actual request
+ * if a variable is missing.
  */
 
-function requireEnv(name: string, value: string | undefined): string {
+function get(name: string): string {
+  const value = process.env[name]
   if (!value) {
     throw new Error(
       `Missing required environment variable: ${name}\n` +
@@ -15,8 +17,8 @@ function requireEnv(name: string, value: string | undefined): string {
 }
 
 export const env = {
-  supabaseUrl:        requireEnv('NEXT_PUBLIC_SUPABASE_URL',    process.env.NEXT_PUBLIC_SUPABASE_URL),
-  supabaseAnonKey:    requireEnv('NEXT_PUBLIC_SUPABASE_ANON_KEY', process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY),
-  supabaseServiceKey: requireEnv('SUPABASE_SERVICE_ROLE_KEY',   process.env.SUPABASE_SERVICE_ROLE_KEY),
-  resendApiKey:       requireEnv('RESEND_API_KEY',              process.env.RESEND_API_KEY),
+  get supabaseUrl()        { return get('NEXT_PUBLIC_SUPABASE_URL') },
+  get supabaseAnonKey()    { return get('NEXT_PUBLIC_SUPABASE_ANON_KEY') },
+  get supabaseServiceKey() { return get('SUPABASE_SERVICE_ROLE_KEY') },
+  get resendApiKey()       { return get('RESEND_API_KEY') },
 } as const
