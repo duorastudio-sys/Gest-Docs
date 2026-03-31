@@ -1,36 +1,173 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Gest Docs
 
-## Getting Started
+Plataforma de gestión documental para gestorías. Permite a las gestorías crear portales personalizados para que sus clientes suban documentación, con clasificación automática y recordatorios por email.
 
-First, run the development server:
+---
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+## Stack
+
+- **Framework**: Next.js 14 (App Router)
+- **Base de datos / Auth / Storage**: Supabase
+- **Email**: Resend
+- **Estilos**: Tailwind CSS
+- **Deploy**: Vercel
+
+---
+
+## Variables de entorno
+
+Crea un archivo `.env.local` en la raíz del proyecto con las siguientes variables:
+
+```env
+# Supabase — https://supabase.com/dashboard/project/_/settings/api
+NEXT_PUBLIC_SUPABASE_URL=https://<project-ref>.supabase.co
+NEXT_PUBLIC_SUPABASE_ANON_KEY=<anon-public-key>
+SUPABASE_SERVICE_ROLE_KEY=<service-role-secret-key>
+
+# Resend — https://resend.com/api-keys
+RESEND_API_KEY=re_xxxxxxxxxxxxxxxxxxxx
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+> `SUPABASE_SERVICE_ROLE_KEY` y `RESEND_API_KEY` son secretos de servidor. Nunca los expongas en el cliente ni los comitees al repositorio.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+Para producción en Vercel, añade estas variables en **Settings → Environment Variables**.
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+---
 
-## Learn More
+## Comandos
 
-To learn more about Next.js, take a look at the following resources:
+```bash
+# Instalar dependencias
+npm install
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+# Servidor de desarrollo
+npm run dev
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+# Build de producción
+npm run build
 
-## Deploy on Vercel
+# Iniciar en producción (tras build)
+npm start
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+# Linter
+npm run lint
+```
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+---
+
+## Setup de Supabase
+
+### 1. Crear el proyecto
+
+1. Ve a [supabase.com](https://supabase.com) y crea un nuevo proyecto.
+2. Copia la URL y las claves (anon key y service role key) en `.env.local`.
+
+### 2. Ejecutar el schema
+
+En el **SQL Editor** de Supabase, ejecuta el contenido de [`supabase/schema.sql`](supabase/schema.sql). Esto crea todas las tablas, enums, políticas RLS y triggers.
+
+### 3. Ejecutar las migraciones
+
+Después del schema inicial, ejecuta en orden los archivos de [`supabase/migrations/`](supabase/migrations/):
+
+```
+supabase/migrations/add_ultimo_recordatorio.sql
+supabase/migrations/add_waitlist.sql
+```
+
+### 4. Crear el bucket de Storage
+
+1. Ve a **Storage** en el dashboard de Supabase.
+2. Crea un nuevo bucket llamado exactamente `documentos`.
+3. Configura la política de acceso: el bucket puede ser privado (los uploads se hacen con la clave de servicio).
+
+### 5. Configurar Resend
+
+1. Crea una cuenta en [resend.com](https://resend.com).
+2. Verifica tu dominio (o usa `onboarding@resend.dev` para pruebas).
+3. En [`lib/emails.ts`](lib/emails.ts), actualiza el campo `from` con tu dominio verificado:
+   ```
+   from: 'Gest Docs <noreply@tudominio.com>'
+   ```
+
+---
+
+## Crear la primera gestoría
+
+Las gestorías se registran manualmente. Hay dos opciones:
+
+### Opción A — Desde el dashboard de Supabase
+
+1. Ve a **Authentication → Users → Add user**.
+2. Introduce email y contraseña. Copia el `UUID` del usuario creado.
+3. En el **SQL Editor**, inserta la fila en la tabla `gestoria`:
+   ```sql
+   INSERT INTO gestoria (id, nombre, email)
+   VALUES (
+     '<uuid-del-usuario>',
+     'Mi Gestoría S.L.',
+     'admin@migestoria.com'
+   );
+   ```
+
+### Opción B — Desde el SQL Editor directamente
+
+```sql
+-- 1. Crear el usuario en Auth (solo funciona con service role)
+SELECT auth.create_user(
+  '{"email": "admin@migestoria.com", "password": "contraseña-segura", "email_confirm": true}'::jsonb
+);
+
+-- 2. Insertar en gestoria usando el UUID devuelto
+INSERT INTO gestoria (id, nombre, email)
+VALUES ('<uuid-devuelto>', 'Mi Gestoría S.L.', 'admin@migestoria.com');
+```
+
+Una vez creada, la gestoría puede iniciar sesión en `/login`.
+
+---
+
+## Estructura del proyecto
+
+```
+app/
+├── page.tsx                          # Landing page (solicitud de acceso)
+├── login/                            # Autenticación de gestoría
+├── dashboard/                        # Área privada de gestoría
+│   ├── page.tsx                      # Lista de clientes
+│   ├── cliente/nuevo/                # Formulario nuevo cliente
+│   └── cliente/[id]/                 # Detalle: expedientes, docs, requerimientos
+├── portal/[token]/                   # Portal público del cliente (sin login)
+└── api/
+    ├── clientes/                     # POST — crear cliente
+    ├── expedientes/                  # POST — crear expediente
+    ├── recordatorio/[expediente_id]/ # POST — enviar recordatorio por email
+    ├── portal/upload/                # POST — subir documento desde el portal
+    └── waitlist/                     # POST — solicitar acceso (landing)
+
+lib/
+├── clasificador.ts                   # Clasifica documentos por nombre de archivo
+├── emails.ts                         # Plantilla y envío de email con Resend
+└── supabase/admin.ts                 # Cliente Supabase con service role key
+
+utils/supabase/
+├── client.ts                         # Cliente Supabase para el navegador
+├── server.ts                         # Cliente Supabase para Server Components
+└── middleware.ts                     # Cliente Supabase para middleware
+
+supabase/
+├── schema.sql                        # Schema completo de la base de datos
+└── migrations/                       # Migraciones incrementales
+```
+
+---
+
+## Flujo de uso
+
+1. La gestoría crea un **cliente** desde el dashboard → se genera un `token_acceso` único.
+2. La gestoría crea un **expediente** para ese cliente y define los **requerimientos** (qué documentos necesita).
+3. La gestoría comparte el enlace `/portal/<token>` con el cliente.
+4. El cliente entra al portal (sin login), ve los documentos pendientes y los sube.
+5. El sistema clasifica automáticamente cada documento y marca el requerimiento como recibido.
+6. Cuando todos los requerimientos obligatorios están recibidos, el expediente se marca como **completo** (trigger de base de datos).
+7. La gestoría puede enviar **recordatorios** por email desde el dashboard si quedan documentos pendientes.
