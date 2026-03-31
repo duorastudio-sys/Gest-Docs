@@ -1,11 +1,10 @@
 /**
  * Centralised env validation.
- * Called at module load time so missing vars cause a clear error at startup,
- * not a cryptic failure at runtime.
+ * NEXT_PUBLIC_ vars must be accessed with literal dot notation so
+ * Next.js/webpack can inline them at build time.
  */
 
-function requireEnv(name: string): string {
-  const value = process.env[name]
+function requireEnv(name: string, value: string | undefined): string {
   if (!value) {
     throw new Error(
       `Missing required environment variable: ${name}\n` +
@@ -16,8 +15,8 @@ function requireEnv(name: string): string {
 }
 
 export const env = {
-  supabaseUrl:         requireEnv('NEXT_PUBLIC_SUPABASE_URL'),
-  supabaseAnonKey:     requireEnv('NEXT_PUBLIC_SUPABASE_ANON_KEY'),
-  supabaseServiceKey:  requireEnv('SUPABASE_SERVICE_ROLE_KEY'),
-  resendApiKey:        requireEnv('RESEND_API_KEY'),
+  supabaseUrl:        requireEnv('NEXT_PUBLIC_SUPABASE_URL',    process.env.NEXT_PUBLIC_SUPABASE_URL),
+  supabaseAnonKey:    requireEnv('NEXT_PUBLIC_SUPABASE_ANON_KEY', process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY),
+  supabaseServiceKey: requireEnv('SUPABASE_SERVICE_ROLE_KEY',   process.env.SUPABASE_SERVICE_ROLE_KEY),
+  resendApiKey:       requireEnv('RESEND_API_KEY',              process.env.RESEND_API_KEY),
 } as const
