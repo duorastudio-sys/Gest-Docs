@@ -3,6 +3,8 @@ import { redirect } from 'next/navigation'
 import { createClient } from '@/utils/supabase/server'
 import NavBar from './NavBar'
 
+export const dynamic = 'force-dynamic'
+
 export default async function DashboardLayout({ children }: { children: React.ReactNode }) {
   const cookieStore = cookies()
   const supabase = createClient(cookieStore)

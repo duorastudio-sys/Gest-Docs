@@ -1,6 +1,8 @@
 import { supabaseAdmin } from '@/lib/supabase/admin'
 import UploadZone from './UploadZone'
 
+export const dynamic = 'force-dynamic'
+
 interface PageProps {
   params: { token: string }
 }
