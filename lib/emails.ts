@@ -1,7 +1,4 @@
 import { Resend } from 'resend'
-import { env } from '@/lib/env'
-
-const resend = new Resend(env.resendApiKey)
 
 const TIPO_LABELS: Record<string, string> = {
   factura: 'Factura',
@@ -124,6 +121,7 @@ export async function enviarRecordatorio({
 </body>
 </html>`
 
+  const resend = new Resend(process.env.RESEND_API_KEY)
   const { error } = await resend.emails.send({
     from: 'Gest Docs <noreply@gestdocs.com>',
     to: clienteEmail,
